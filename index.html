@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resoconto Miniere</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ============ LOGIN (LINEARE AL TEMA DEL SOFTWARE) ============ -->
+    <div id="schermata-login" class="login-sfondo" hidden>
+        <form class="card login-card" id="form-login">
+            <div class="logo-quadro logo-grande">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#f4efdc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="6 3 18 3 22 9 12 22 2 9 6 3"></polygon>
+                    <line x1="2" y1="9" x2="22" y2="9"></line>
+                    <polyline points="12 22 8 9 12 3 16 9 12 22"></polyline>
+                </svg>
+            </div>
+            <div class="login-titolo">Gestione Resoconto Miniere</div>
+            <div class="pillola-struttura">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                Accesso Riservato: <strong id="struttura-login">Registro Miniere</strong>
+            </div>
+
+            <div class="campi">
+                <div>
+                    <label for="campo-utente">Utente</label>
+                    <input type="text" id="campo-utente" autocomplete="username" placeholder="Es. admin" required>
+                </div>
+                <div>
+                    <label for="campo-password">Password</label>
+                    <div class="campo-password-riga">
+                        <input type="password" id="campo-password" autocomplete="current-password" placeholder="Inserisci password" required>
+                        <button type="button" class="mostra-password" id="btn-mostra-password" aria-label="Mostra password" aria-pressed="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <line x1="2" y1="2" x2="22" y2="22" class="barra-occhio"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="errore" id="errore-login" hidden></div>
+            <button type="submit" id="btn-login-submit" class="btn-primario largo">Accedi</button>
+        </form>
+        <div class="versione-login" id="versione-login">Gestione Resoconto Miniere &bull; Autenticazione protetta</div>
+    </div>
+
+    <!-- ============ APPLICAZIONE ============ -->
+    <div id="schermata-app" class="app-sfondo" hidden>
+        <header class="barra-superiore">
+            <div class="marchio">
+                <div class="logo-quadro">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f4efdc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="6 3 18 3 22 9 12 22 2 9 6 3"></polygon>
+                        <line x1="2" y1="9" x2="22" y2="9"></line>
+                        <polyline points="12 22 8 9 12 3 16 9 12 22"></polyline>
+                    </svg>
+                </div>
+                <div>
+                    <div class="marchio-riga">
+                        <span class="marchio-nome">Gestione Resoconto Miniere</span>
+                        <span class="badge-struttura" id="struttura-barra">Operatore</span>
+                    </div>
+                    <div class="marchio-sottotitolo">Calcolo produzioni, stipendi e bilanci minerari</div>
+                </div>
+            </div>
+            <div class="azioni-barra">
+                <button type="button" class="btn-chiaro standalone-only-btn" id="btn-torna-gestionale-barra" onclick="tornaAlGestionale()">← Torna al Gestionale</button>
+                <div class="stato-servizio" id="stato-servizio">
+                    <span class="pallino"></span>
+                    <span id="stato-testo">Connesso come <strong id="auth-user-name">admin</strong></span>
+                </div>
+                <button type="button" class="btn-chiaro" id="btn-esci">Esci</button>
+            </div>
+        </header>
+
+        <div class="container">
+
+        <h1>Gestione Resoconto Miniere</h1>
+
+        <div class="input-section">
+            <label for="reportInput">Incolla qui il resoconto giornaliero:</label>
+            <textarea id="reportInput" rows="10" placeholder="Miniera 1 : Miniera d'oro - Nodo 1135..."></textarea>
+
+            <div style="margin-top: 15px; margin-bottom: 15px;">
+                <label for="dataSelezionata"><strong>Giorno del resoconto:</strong></label>
+                <select id="dataSelezionata" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 100%; max-width: 250px;">
+                    <option value="">Nessun dato</option>
+                </select>
+            </div>
+
+            <div class="variables">
+                <div>
+                    <label for="salari">Salari dei minatori (ducati):</label>
+                    <input type="number" id="salari" step="0.01" value="0">
+                </div>
+                <div>
+                    <label for="valoreFerro">Valore Ferro (ducati/chilo):</label>
+                    <input type="number" id="valoreFerro" step="0.1" value="19">
+                </div>
+                <div>
+                    <label for="valorePietra">Valore Pietra (ducati/quintale):</label>
+                    <input type="number" id="valorePietra" step="0.1" value="14">
+                </div>
+                <div>
+                    <label for="valoreArgilla">Valore Argilla (ducati/blocco):</label>
+                    <input type="number" id="valoreArgilla" step="0.1" value="4">
+                </div>
+            </div>
+
+            <div class="buttons">
+                <button onclick="generaResoconto()">Genera HTML Visivo</button>
+                <button onclick="generaBBCode()" class="bbcode-btn">Genera Formattazione</button>
+                <button onclick="salvaGiorno()" class="save-btn">💾 Salva Giorno</button>
+                <button id="btnTogglePietraFerro" onclick="toggleCalcoloPietraFerro()" class="calc-pf-btn">⚖️ Calcola Valore Pietra e Ferro</button>
+            </div>
+
+            <!-- SEZIONE ARCHIVIO GIORNI SALVATI (JSON) -->
+            <div class="archive-section">
+                <h3>🗄️ Archivio Giorni Salvati (<span id="conteggioGiorniSalvati">0</span>)</h3>
+                <div class="archive-controls">
+                    <div class="archive-select-group">
+                        <label for="giornoSalvatoSelect"><strong>Seleziona giorno salvato:</strong></label>
+                        <select id="giornoSalvatoSelect">
+                            <option value="">Nessun giorno salvato</option>
+                        </select>
+                    </div>
+                    <div class="archive-buttons">
+                        <button onclick="mostraGiornoSalvato()" class="show-btn">👁️ Mostra</button>
+                        <button onclick="generaResocontoFinale()" class="final-btn">📊 Resoconto Finale</button>
+                        <button type="button" id="btnToggleStatistiche" onclick="toggleStatisticheMiniere()" class="stats-btn">📈 Grafici e Statistiche</button>
+                        <button type="button" id="btnApriStatisticheSeparate" onclick="apriStatisticheSeparate()" class="stats-popout-btn" title="Apri Grafici e Statistiche in una finestra o scheda separata">↗️ Apri separatamente</button>
+                        <button onclick="eliminaGiornoSalvato()" class="delete-btn" title="Elimina il giorno selezionato">🗑️ Elimina</button>
+                    </div>
+                </div>
+                <div class="archive-file-controls">
+                    <button onclick="esportaJSON()" class="secondary-btn">📥 Esporta file JSON</button>
+                    <button onclick="document.getElementById('importJsonInput').click()" class="secondary-btn">📤 Importa file JSON</button>
+                    <button onclick="svuotaArchivio()" class="secondary-btn danger-outline-btn">🧹 Svuota Tutto</button>
+                </div>
+            </div>
+        </div>
+        <input type="file" id="importJsonInput" accept=".json" style="display: none;" onchange="importaJSON(event)">
+
+        <!-- SEZIONE OUTPUT VISIVO (HTML) - INVARIATA RISPETTO AL RESOCONTO GIORNALIERO ORIGINALE -->
+        <div id="output-section" class="output-section" style="display: none;">
+            <div id="report-header-banner" class="report-banner" style="display: none;"></div>
+            <div id="riepilogo-giorni-finale" style="display: none;"></div>
+
+            <h2 class="red-title">Valori individuali</h2>
+            <div id="valori-individuali"></div>
+
+            <ul>
+                <li><strong>Salari dei minatori:</strong> <span id="out-salari"></span> ducati</li>
+                <li><strong>La manutenzione avviene:</strong> automaticamente</li>
+            </ul>
+
+            <h2 class="red-title">Situazione complessiva</h2>
+            <div id="situazione-complessiva"></div>
+        </div>
+
+        <!-- SEZIONE OUTPUT CODICE (BBCODE) - INVARIATA RISPETTO AL RESOCONTO GIORNALIERO ORIGINALE -->
+        <div id="bbcode-section" class="output-section" style="display: none; margin-top: 30px;">
+            <h2 class="red-title">Codice per il Forum (BBCode)</h2>
+            <p>Copia questo codice e incollalo sul forum:</p>
+            <textarea id="bbcode-output" rows="20" readonly></textarea>
+            <button onclick="copiaBBCode()" style="margin-top: 10px;">📋 Copia Codice</button>
+        </div>
+
+        <!-- SEZIONE SEPARATA: CALCOLO VALORE 1 PIETRA E 1 FERRO & STIPENDI MINIERE (1, 7, 15, 30 GIORNI) -->
+        <div id="sezione-opzione-pietra-ferro" class="mine-salaries-section" style="display: none; margin-top: 35px;">
+            <div class="mine-salaries-header">
+                <h2>⚖️ Calcolo Valore 1 Pietra e 1 Ferro (1, 7, 15 e 30 Giorni)</h2>
+                <div class="quick-salary-bar">
+                    <label for="stipendioRapido">Stipendio rapido per tutte (ducati):</label>
+                    <input type="number" id="stipendioRapido" step="0.01" placeholder="es. 20" style="width: 90px;">
+                    <button type="button" onclick="applicaStipendioATutte()" class="secondary-btn">Applica a tutte</button>
+                </div>
+            </div>
+            <p class="section-hint">
+                Inserisci gli stipendi delle miniere: lo <strong>stipendio per singola ora</strong> è calcolato come <code>Stipendio / 20</code> e lo <strong>stipendio totale della miniera</strong> è calcolato in base all'<strong>affluenza</strong> recuperata dal resoconto inserito (previsto per <strong>1 giorno, 7 giorni, 15 giorni e 30 giorni</strong>).
+            </p>
+
+            <div class="table-responsive">
+                <table class="salaries-table">
+                    <thead>
+                        <tr>
+                            <th>Miniera</th>
+                            <th>Tipo</th>
+                            <th>Stipendio inserito (ducati)</th>
+                            <th>Stipendio/ora (÷20)</th>
+                            <th>Affluenza (ore)</th>
+                            <th>Stipendio Tot. 1g</th>
+                            <th>Stipendio Tot. 7g</th>
+                            <th>Stipendio Tot. 15g</th>
+                            <th>Stipendio Tot. 30g</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabella-stipendi-miniere">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="auto-apply-bar">
+                <div class="auto-apply-Period">
+                    <label for="periodoCalcoloSelect"><strong>Dettaglio formula per:</strong></label>
+                    <select id="periodoCalcoloSelect" onchange="aggiornaAnteprimaStipendi()">
+                        <option value="1">1 Giorno</option>
+                        <option value="7">7 Giorni</option>
+                        <option value="15">15 Giorni</option>
+                        <option value="30">30 Giorni</option>
+                    </select>
+                    <label for="modalitaPeriodoSelect" style="margin-left: 10px;"><strong>Modalità calcolo periodi:</strong></label>
+                    <select id="modalitaPeriodoSelect" onchange="aggiornaAnteprimaStipendi()">
+                        <option value="misto">Archivio (con proiezione se &lt; N gg)</option>
+                        <option value="archivio">Solo Giorni Salvati in Archivio</option>
+                        <option value="proiezione">Proiezione dal Giorno Corrente (×1, ×7, ×15, ×30)</option>
+                    </select>
+                </div>
+                <button type="button" onclick="mostraCalcoloPietraFerro()" style="padding: 8px 16px; font-size: 14px;">⚖️ Calcola 1 Pietra e 1 Ferro</button>
+            </div>
+
+            <div id="live-pietra-ferro-preview" class="live-calc-preview"></div>
+            <div id="sezione-calcolo-pietra-ferro" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- SEZIONE SEPARATA E APRIBILE ANCHE IN PAGINA DEDICATA: GRAFICI E STATISTICHE MINIERE -->
+        <div id="sezione-statistiche-miniere" class="stats-section" style="display: none; margin-top: 35px;">
+            <div class="stats-header">
+                <div class="stats-title-group">
+                    <h2>📈 Grafici e Statistiche delle Miniere</h2>
+                    <p class="section-hint" style="margin-bottom: 0;">
+                        Analisi completa basata esclusivamente sui <strong>dati salvati in archivio</strong> (<span id="stats-giorni-badge">0 giorni</span>).
+                    </p>
+                </div>
+                <div class="stats-header-actions">
+                    <button type="button" onclick="renderStatisticheMiniere()" class="secondary-btn" title="Ricarica i grafici dai dati salvati">🔄 Aggiorna</button>
+                    <button type="button" onclick="esportaStatisticheCSV()" class="secondary-btn" id="btnEsportaStatsCSV" title="Scarica statistiche miniere in formato CSV">📥 Esporta CSV</button>
+                    <button type="button" onclick="apriStatisticheSeparate()" class="stats-popout-btn inline-only-btn" title="Apri la dashboard statistiche in una scheda separata">↗️ Apri separatamente</button>
+                    <button type="button" onclick="toggleStatisticheMiniere()" class="secondary-btn inline-only-btn">✖️ Chiudi</button>
+                    <button type="button" onclick="document.getElementById('importJsonInput').click()" class="secondary-btn standalone-only-btn">📤 Importa JSON</button>
+                    <button type="button" onclick="esportaJSON()" class="secondary-btn standalone-only-btn">📥 Esporta JSON</button>
+                    <button type="button" onclick="tornaAlGestionale()" class="secondary-btn standalone-only-btn">← Torna al Gestionale</button>
+                </div>
+            </div>
+
+            <div class="stats-filter-bar">
+                <div class="stats-filter-group">
+                    <label for="stats-periodo-select"><strong>Periodo salvato:</strong></label>
+                    <select id="stats-periodo-select" onchange="onFiltroStatisticheChange()">
+                        <option value="all">Tutti i giorni salvati</option>
+                        <option value="7">Ultimi 7 giorni salvati</option>
+                        <option value="15">Ultimi 15 giorni salvati</option>
+                        <option value="30">Ultimi 30 giorni salvati</option>
+                        <option value="custom">Intervallo date personalizzato</option>
+                    </select>
+                </div>
+                <div id="stats-custom-dates" class="stats-custom-dates" style="display: none;">
+                    <label for="stats-data-da">Da:</label>
+                    <input type="date" id="stats-data-da" onchange="renderStatisticheMiniere()">
+                    <label for="stats-data-a">A:</label>
+                    <input type="date" id="stats-data-a" onchange="renderStatisticheMiniere()">
+                </div>
+                <div class="stats-filter-group">
+                    <label for="stats-tipo-select"><strong>Tipo miniera:</strong></label>
+                    <select id="stats-tipo-select" onchange="onTipoFiltroStatisticheChange()">
+                        <option value="all">Tutte le miniere</option>
+                        <option value="oro">💰 Solo Oro</option>
+                        <option value="ferro">⛏️ Solo Ferro</option>
+                        <option value="pietra">🪨 Solo Pietra</option>
+                        <option value="argilla">🧱 Solo Argilla</option>
+                    </select>
+                </div>
+                <div id="stats-filter-summary" class="stats-filter-summary"></div>
+            </div>
+
+            <div id="stats-empty-state" class="stats-empty-state" style="display: none;">
+                <div class="stats-empty-icon">📊</div>
+                <h3>Nessun dato salvato nell'archivio</h3>
+                <p>Le statistiche e i grafici vengono generati dai giorni salvati. Salva almeno un giorno con <strong>💾 Salva Giorno</strong> oppure importa un file <code>.json</code>.</p>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+                    <button type="button" onclick="document.getElementById('importJsonInput').click()" class="save-btn">📤 Importa file JSON</button>
+                    <button type="button" onclick="tornaAlGestionale()" class="secondary-btn standalone-only-btn">← Torna al Gestionale</button>
+                </div>
+            </div>
+
+            <div id="stats-dashboard-content" style="display: none;">
+                <div id="stats-kpi-grid" class="stats-kpi-grid"></div>
+
+                <div class="stats-charts-grid">
+                    <div class="stats-card stats-card-full">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>💰 Andamento Economico Giornaliero</h3>
+                                <small id="subtitle-chart-bilancio" class="stats-card-subtitle"></small>
+                            </div>
+                            <div class="stats-tab-group" id="tabs-chart-bilancio">
+                                <button type="button" class="stats-tab active" data-mode="giornaliero" onclick="cambiaModalitaChartBilancio('giornaliero', this)">Bilancio Giorno</button>
+                                <button type="button" class="stats-tab" data-mode="cumulativo" onclick="cambiaModalitaChartBilancio('cumulativo', this)">Cumulativo</button>
+                                <button type="button" class="stats-tab" data-mode="oro_salari" onclick="cambiaModalitaChartBilancio('oro_salari', this)">Oro vs Salari</button>
+                            </div>
+                        </div>
+                        <div id="stats-chart-bilancio" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card stats-card-full">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>📦 Andamento Produzione, Manutenzione e Ore nel Tempo</h3>
+                                <small id="subtitle-chart-risorse" class="stats-card-subtitle"></small>
+                            </div>
+                            <div class="stats-tab-group" id="tabs-chart-risorse">
+                                <button type="button" class="stats-tab active" data-res="ferro" onclick="cambiaRisorsaChart('ferro', this)">⛏️ Ferro</button>
+                                <button type="button" class="stats-tab" data-res="pietra" onclick="cambiaRisorsaChart('pietra', this)">🪨 Pietra</button>
+                                <button type="button" class="stats-tab" data-res="oro" onclick="cambiaRisorsaChart('oro', this)">💰 Oro</button>
+                                <button type="button" class="stats-tab" data-res="argilla" onclick="cambiaRisorsaChart('argilla', this)">🧱 Argilla</button>
+                                <button type="button" class="stats-tab" data-res="affluenza" onclick="cambiaRisorsaChart('affluenza', this)">⏱️ Ore Lavoro</button>
+                            </div>
+                        </div>
+                        <div id="stats-chart-risorse" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>🥧 Ripartizione Valore Economico</h3>
+                                <small id="subtitle-chart-donut" class="stats-card-subtitle"></small>
+                            </div>
+                            <div class="stats-tab-group" id="tabs-chart-donut">
+                                <button type="button" class="stats-tab active" data-mode="risorse" onclick="cambiaModalitaDonut('risorse', this)">Per Risorsa</button>
+                                <button type="button" class="stats-tab" data-mode="miniere" onclick="cambiaModalitaDonut('miniere', this)">Per Miniera</button>
+                            </div>
+                        </div>
+                        <div id="stats-chart-composizione" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>⚖️ Bilancio Fisico: Lordo vs Costi</h3>
+                                <small class="stats-card-subtitle">Autoconsumo manutenzioni, salari e saldo netto</small>
+                            </div>
+                        </div>
+                        <div id="stats-chart-confronto-risorse" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card stats-card-full">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>🏆 Classifica & Confronto tra Miniere</h3>
+                                <small id="subtitle-chart-miniere" class="stats-card-subtitle"></small>
+                            </div>
+                            <div class="stats-tab-group" id="tabs-chart-classifica">
+                                <button type="button" class="stats-tab active" data-metric="valoreNetto" onclick="cambiaMetricaClassifica('valoreNetto', this)">💎 Valore Netto</button>
+                                <button type="button" class="stats-tab" data-metric="produzione" onclick="cambiaMetricaClassifica('produzione', this)">📦 Produzione</button>
+                                <button type="button" class="stats-tab" data-metric="affluenza" onclick="cambiaMetricaClassifica('affluenza', this)">⏱️ Ore Lavoro</button>
+                                <button type="button" class="stats-tab" data-metric="resaOraria" onclick="cambiaMetricaClassifica('resaOraria', this)">⚡ Resa/Ora</button>
+                                <button type="button" class="stats-tab" data-metric="costoManutenzione" onclick="cambiaMetricaClassifica('costoManutenzione', this)">🔧 Costo Manutenzione</button>
+                            </div>
+                        </div>
+                        <div id="stats-chart-classifica-miniere" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card stats-card-full">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>📉 Trend Storico delle Singole Miniere</h3>
+                                <small id="subtitle-chart-trend-miniere" class="stats-card-subtitle">Clicca sui nomi in legenda per mostrare/nascondere una miniera</small>
+                            </div>
+                            <div class="stats-tab-group" id="tabs-chart-trend-miniere">
+                                <button type="button" class="stats-tab active" data-metric="valoreNetto" onclick="cambiaMetricaTrendMiniere('valoreNetto', this)">💎 Valore Netto</button>
+                                <button type="button" class="stats-tab" data-metric="produzione" onclick="cambiaMetricaTrendMiniere('produzione', this)">📦 Produzione</button>
+                                <button type="button" class="stats-tab" data-metric="affluenza" onclick="cambiaMetricaTrendMiniere('affluenza', this)">⏱️ Ore Lavoro</button>
+                                <button type="button" class="stats-tab" data-metric="costoManutenzione" onclick="cambiaMetricaTrendMiniere('costoManutenzione', this)">🔧 Manutenzione</button>
+                            </div>
+                        </div>
+                        <div id="stats-chart-andamento-miniere" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>🔩 Manutenzione Consumi per Miniera</h3>
+                                <small class="stats-card-subtitle">Pietra (q.li) e Ferro (kg) consumati in manutenzione</small>
+                            </div>
+                        </div>
+                        <div id="stats-chart-manutenzione-miniere" class="stats-chart-box"></div>
+                    </div>
+
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <div>
+                                <h3>⛏️ Operatività & Affluenza Miniere</h3>
+                                <small class="stats-card-subtitle">Giorni aperti vs chiusi e media ore lavorate/giorno</small>
+                            </div>
+                        </div>
+                        <div id="stats-chart-operativita" class="stats-chart-box"></div>
+                    </div>
+                </div>
+
+                <div class="stats-card stats-table-card">
+                    <div class="stats-card-header">
+                        <div>
+                            <h3>📋 Tabella Statistiche Dettagliate per Miniera</h3>
+                            <small class="stats-card-subtitle">Clicca sulle intestazioni delle colonne per ordinare i dati</small>
+                        </div>
+                    </div>
+                    <div class="table-responsive" id="stats-tabella-miniere"></div>
+                </div>
+
+                <div class="stats-card stats-table-card">
+                    <div class="stats-card-header">
+                        <div>
+                            <h3>📌 Riepilogo Prezzi Salvati, Salari e Record Giornalieri</h3>
+                            <small class="stats-card-subtitle">Medie, minimi, massimi e giorni di picco nell'intervallo selezionato</small>
+                        </div>
+                    </div>
+                    <div id="stats-riepilogo-parametri"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div id="stats-chart-tooltip" class="stats-tooltip" hidden></div>
+
+    <script src="script.js"></script>
+    <script src="stats.js"></script>
+</body>
+
+</html>

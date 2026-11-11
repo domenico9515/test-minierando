@@ -1,0 +1,26 @@
+{
+  "name": "minierando-gestione-miniere",
+  "version": "1.2.0",
+  "description": "Gestione Resoconto Miniere con autenticazione scrypt e sessioni cookie HttpOnly (derivata dal progetto superset)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "hash-pw": "node tool_script/crea-hash.js",
+    "test": "echo \"Nessun test specificato\" && exit 0"
+  },
+  "keywords": [
+    "miniere",
+    "renaissance-kingdoms",
+    "superset",
+    "scrypt",
+    "session",
+    "authentication",
+    "express"
+  ],
+  "author": "Minierando Team",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}
