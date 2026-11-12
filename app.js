@@ -56,7 +56,7 @@ function ottieniStoreBlobs(req) {
         } catch {}
     }
     try {
-        return getStore('minierando_dati');
+        return getStore({ name: 'minierando_dati', consistency: 'strong' });
     } catch {
         return null;
     }
