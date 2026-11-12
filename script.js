@@ -499,6 +499,7 @@ function elaboraDati() {
 
     return {
         data: dataScelta,
+        testoOriginale: testo,
         minere,
         salari,
         vFerro,
@@ -572,16 +573,84 @@ function renderDatiHTML(d, opzioni = {}) {
     document.getElementById('output-section').style.display = 'block';
 }
 
+function ottieniDataResocontoFormattata(d) {
+    const MESI = [
+        'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+    ];
+
+    const formattaSingola = (dataStr) => {
+        if (!dataStr || typeof dataStr !== 'string') return null;
+        const match = dataStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!match) return null;
+        const anno = parseInt(match[1], 10) - 552;
+        const meseIdx = parseInt(match[2], 10) - 1;
+        const giorno = parseInt(match[3], 10);
+        const mese = MESI[meseIdx] || 'Novembre';
+        return { giorno, mese, anno, formatted: `${giorno} ${mese} ${anno}` };
+    };
+
+    // Caso Resoconto Finale cumulativo (più giorni)
+    if (d && Array.isArray(d.dateOrdinate) && d.dateOrdinate.length > 0) {
+        if (d.dateOrdinate.length === 1) {
+            const singola = formattaSingola(d.dateOrdinate[0]);
+            if (singola) return `del ${singola.formatted}`;
+        } else {
+            const prima = formattaSingola(d.dateOrdinate[0]);
+            const ultima = formattaSingola(d.dateOrdinate[d.dateOrdinate.length - 1]);
+            if (prima && ultima) {
+                if (prima.mese === ultima.mese && prima.anno === ultima.anno) {
+                    return `dal ${prima.giorno} al ${ultima.giorno} ${ultima.mese} ${ultima.anno}`;
+                }
+                return `dal ${prima.formatted} al ${ultima.formatted}`;
+            }
+        }
+    }
+
+    // Caso resoconto giornaliero
+    let dataStr = d ? d.data : null;
+    if (!dataStr) {
+        const select = document.getElementById('dataSelezionata');
+        if (select && select.value) dataStr = select.value;
+    }
+    if (!dataStr && d && d.testoOriginale) {
+        const match = d.testoOriginale.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+        if (match) dataStr = match[1];
+    }
+    if (!dataStr) {
+        const input = document.getElementById('reportInput');
+        if (input && input.value) {
+            const match = input.value.match(/\b(\d{4}-\d{2}-\d{2})\b/);
+            if (match) dataStr = match[1];
+        }
+    }
+
+    const dataObj = formattaSingola(dataStr);
+    if (dataObj) {
+        return `del ${dataObj.formatted}`;
+    }
+
+    const oggi = new Date();
+    const g = oggi.getDate();
+    const m = MESI[oggi.getMonth()];
+    const a = oggi.getFullYear() - 552;
+    return `del ${g} ${m} ${a}`;
+}
+
 function renderDatiBBCode(d, intestazioneExtra = '') {
     document.getElementById('output-section').style.display = 'none';
 
     const bbColor = (val) => val >= 0 ? '#2E7D32' : '#D32F2F';
     const sign = (val) => val > 0 ? '+' : '';
 
-    let bbcode = `[quote]\n`;
-    if (intestazioneExtra) {
-        bbcode += `[color=#8E0000][size=16][b]${intestazioneExtra}[/b][/size][/color]\n\n`;
-    }
+    const dataResoconto = ottieniDataResocontoFormattata(d);
+
+    let bbcode = `[rp]\n`;
+    bbcode += `[center][img]https://i.imgur.com/Im0gy1o.png[/img][/center]\n\n`;
+    bbcode += `[center][b][size=18][color=#C62828]Ufficio del Ministro delle Miniere e delle Grandi Opere[/color][/b][/size]\n`;
+    bbcode += `[b][size=16][color=#8E0000]Resoconto minerario ${dataResoconto}[/color][/b][/size][/center]\n\n`;
+
+    bbcode += `[quote]\n`;
     bbcode += `[color=#8E0000][size=15][b]Valori individuali[/b][/size][/color][list]\n`;
 
     d.minere.forEach(m => {
@@ -617,6 +686,16 @@ function renderDatiBBCode(d, intestazioneExtra = '') {
     bbcode += `[*] [img]https://lesroyaumes.cdn.oxv.fr/images/items/item150.png[/img] [b]Argilla[/b]: ${formulaArgilla}[color=${bbColor(d.cvArgilla)}]${sign(d.cvArgilla)}${formatNum(d.cvArgilla)}[/color] ducati\n\n`;
     bbcode += `[*] [b]TOTALE[/b]: [color=${bbColor(d.totaleDucati)}]${sign(d.totaleDucati)}${formatNum(d.totaleDucati)}[/color] ducati[/list]\n[/list][/quote]`;
 
+    const testoResoconto = (d && d.testoOriginale)
+        ? d.testoOriginale
+        : (!d.dateOrdinate && document.getElementById('reportInput') ? document.getElementById('reportInput').value : '');
+
+    if (testoResoconto && testoResoconto.trim()) {
+        bbcode += `\n\n[spoiler]\n${testoResoconto.trim()}\n[/spoiler]`;
+    }
+
+    bbcode += `\n[/rp]`;
+
     document.getElementById('bbcode-output').value = bbcode;
     document.getElementById('bbcode-section').style.display = 'block';
 }
@@ -634,7 +713,7 @@ function generaResoconto() {
 function generaBBCode() {
     const d = elaboraDati();
     if (!d) return alert("Inserisci il testo del resoconto!");
-    renderDatiBBCode(d, d.data ? `Resoconto del giorno ${d.data}` : '');
+    renderDatiBBCode(d);
 }
 
 function copiaBBCode() {
@@ -877,6 +956,14 @@ function mostraGiornoSalvato() {
     document.getElementById('valoreFerro').value = datiGiorno.vFerro;
     document.getElementById('valorePietra').value = datiGiorno.vPietra;
     document.getElementById('valoreArgilla').value = datiGiorno.vArgilla;
+    if (datiGiorno.testoOriginale) {
+        document.getElementById('reportInput').value = datiGiorno.testoOriginale;
+        if (typeof estraiDateDisponibili === 'function') {
+            estraiDateDisponibili();
+        }
+        const selectData = document.getElementById('dataSelezionata');
+        if (selectData) selectData.value = dataScelta;
+    }
 
     renderDatiHTML(datiGiorno, {
         titoloBanner: `📅 Giorno Salvato Visualizzato: ${dataScelta}`,
@@ -889,7 +976,7 @@ function generaBBCodeGiornoSalvato(dataScelta) {
     const archivio = caricaArchivio();
     const datiGiorno = archivio[dataScelta];
     if (!datiGiorno) return;
-    renderDatiBBCode(datiGiorno, `Resoconto del giorno ${dataScelta}`);
+    renderDatiBBCode(datiGiorno);
 }
 
 // 3. TASTINO RESOCONTO FINALE (conteggio cumulativo di tutti i giorni salvati - INVARIATO)

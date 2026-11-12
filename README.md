@@ -79,7 +79,7 @@ Il progetto è configurato per il deploy nativo su **Netlify** mantenendo l'aute
 3. Scegli la data desiderata e imposta i **Salari dei minatori** e il **valore unitario in ducati** delle risorse (Ferro, Pietra, Argilla).
 4. Usa i pulsanti principali:
    - **Genera HTML Visivo**: mostra a schermo il bilancio del giorno selezionato.
-   - **Genera Formattazione**: genera il codice BBCode da copiare per il forum.
+   - **Genera Formattazione**: genera il codice BBCode da copiare per il forum (incluso il resoconto grezzo incollato racchiuso sotto tag `[spoiler]`).
    - **💾 Salva Giorno**: salva i dati elaborati del giorno selezionato nell'archivio JSON. Se il giorno esiste già, apparirà un messaggio di conferma per chiedere se sovrascriverlo.
 5. Usa la sezione **🗄️ Archivio Giorni Salvati**:
    - Seleziona una data dal menu **Seleziona giorno salvato** e clicca su **👁️ Mostra** per rivedere il resoconto di quel giorno.
