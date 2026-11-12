@@ -1,6 +1,9 @@
 # Dipendenze
 node_modules/
 
+# Netlify
+.netlify/
+
 # Configurazione locale e segreti
 config/.env
 .env

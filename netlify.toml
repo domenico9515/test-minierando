@@ -1,0 +1,21 @@
+# Configurazione Netlify per Gestione Resoconto Miniere
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Reindirizzamento trasparente delle chiamate API verso la Netlify Function serverless
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
+
+# Reindirizzamento pagina statistiche verso la vista dedicata
+[[redirects]]
+  from = "/statistiche"
+  to = "/?vista=statistiche"
+  status = 301

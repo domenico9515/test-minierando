@@ -45,6 +45,7 @@ setInterval(async () => {
 
 async function api(percorso, opzioni = {}) {
     const risposta = await fetch(percorso, {
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         ...opzioni,
         body: opzioni.corpo ? JSON.stringify(opzioni.corpo) : (opzioni.body ? opzioni.body : undefined)

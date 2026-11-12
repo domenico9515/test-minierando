@@ -55,6 +55,24 @@ Copia l'output ottenuto nel file `config/.env` alla voce `WEB_PASSWORD_HASH=...`
 ### Modalità Standalone Browser
 Puoi anche aprire direttamente il file `index.html` con doppio clic in qualsiasi browser: la schermata di login funzionerà in locale validando le credenziali predefinite.
 
+### Deploy su Netlify (Soluzione 1 - Netlify Functions Serverless)
+Il progetto è configurato per il deploy nativo su **Netlify** mantenendo l'autenticazione server-side sicura basata su `scrypt` e cookie di sessione `HttpOnly`:
+1. **File di configurazione**:
+   - `netlify.toml`: definisce la cartella dei file statici (`.`), la cartella delle funzioni (`netlify/functions`) e le regole di rewrite da `/api/*` a `/.netlify/functions/api/:splat` oltre al redirect per `/statistiche`.
+   - `netlify/functions/api.js`: adatta l'app Express in una funzione serverless con `serverless-http` e normalizzazione degli header `Set-Cookie`.
+2. **Procedura di deploy**:
+   - Collega il repository GitHub su Netlify (es. `test-minierando`).
+   - Impostazioni di build:
+     - **Base directory**: vuota (root)
+     - **Build command**: vuoto (nessun passaggio di build necessario)
+     - **Publish directory**: `.`
+     - **Functions directory**: `netlify/functions` (rilevata in automatico da `netlify.toml`).
+   - (Opzionale) Nelle impostazioni di Netlify (**Site configuration > Environment variables**) puoi impostare:
+     - `WEB_USER`: nome utente amministratore (default: `admin`)
+     - `WEB_PASSWORD_HASH`: hash scrypt generato con `npm run hash-pw`
+     - `WEB_SESSION_SECRET`: chiave HMAC segreta casuale
+     - `STRUCTURE_NAME`: nome personalizzato della struttura/comune
+
 ### Utilizzo del Gestionale Miniere
 2. **Incolla il resoconto** del gioco nell'apposita casella di testo: il menu a tendina **Giorno del resoconto** si popolerà automaticamente con le date rilevate nel testo.
 3. Scegli la data desiderata e imposta i **Salari dei minatori** e il **valore unitario in ducati** delle risorse (Ferro, Pietra, Argilla).
