@@ -12,7 +12,7 @@ const crypto = require('crypto');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
 const config = require('./config/env/all');
 
 const app = express();
@@ -35,25 +35,35 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Cache-control no-store per tutte le API, identico a superset
+// Inizializzazione contesto Netlify Blobs per ogni richiesta serverless
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store');
+    if (req.apiGateway && req.apiGateway.event) {
+        try {
+            connectLambda(req.apiGateway.event);
+        } catch {}
+    }
     next();
 });
 
 // ============================================================
 // GESTIONE PERSISTENZA CLOUD (NETLIFY BLOBS + FALLBACK LOCALE)
 // ============================================================
-function ottieniStoreBlobs() {
+function ottieniStoreBlobs(req) {
+    if (req && req.apiGateway && req.apiGateway.event) {
+        try {
+            connectLambda(req.apiGateway.event);
+        } catch {}
+    }
     try {
-        return getStore({ name: 'minierando_dati', consistency: 'strong' });
+        return getStore('minierando_dati');
     } catch {
         return null;
     }
 }
 
-async function leggiDatiStore() {
-    const store = ottieniStoreBlobs();
+async function leggiDatiStore(req) {
+    const store = ottieniStoreBlobs(req);
     if (store) {
         try {
             const dati = await store.get('archivio_completo', { type: 'json' });
@@ -65,6 +75,12 @@ async function leggiDatiStore() {
                     provider: 'netlify_blobs'
                 };
             }
+            return {
+                archivio: {},
+                stipendi: {},
+                aggiornatoIl: null,
+                provider: 'netlify_blobs'
+            };
         } catch (e) {
             console.warn('Avviso lettura Netlify Blobs:', e.message);
         }
@@ -86,7 +102,7 @@ async function leggiDatiStore() {
     return { archivio: {}, stipendi: {}, aggiornatoIl: null, provider: 'vuoto' };
 }
 
-async function scriviDatiStore(payload) {
+async function scriviDatiStore(req, payload) {
     const datiNormalizzati = {
         archivio: (payload && typeof payload.archivio === 'object') ? payload.archivio : {},
         stipendi: (payload && typeof payload.stipendi === 'object') ? payload.stipendi : {},
@@ -94,7 +110,7 @@ async function scriviDatiStore(payload) {
     };
 
     let salvatoSuBlobs = false;
-    const store = ottieniStoreBlobs();
+    const store = ottieniStoreBlobs(req);
     if (store) {
         try {
             await store.setJSON('archivio_completo', datiNormalizzati);
@@ -297,7 +313,7 @@ apiRouter.get('/auth/verify', richiediLogin, (req, res) => {
 // Endpoint di persistenza archivio (Netlify Blobs)
 apiRouter.get('/archivio', richiediLogin, async (req, res) => {
     try {
-        const dati = await leggiDatiStore();
+        const dati = await leggiDatiStore(req);
         res.json({ ok: true, ...dati });
     } catch (e) {
         res.status(500).json({ ok: false, errore: 'Impossibile leggere i dati: ' + e.message });
@@ -306,7 +322,7 @@ apiRouter.get('/archivio', richiediLogin, async (req, res) => {
 
 apiRouter.post('/archivio', richiediLogin, async (req, res) => {
     try {
-        const esito = await scriviDatiStore(req.body);
+        const esito = await scriviDatiStore(req, req.body);
         res.json(esito);
     } catch (e) {
         res.status(500).json({ ok: false, errore: 'Impossibile salvare i dati: ' + e.message });

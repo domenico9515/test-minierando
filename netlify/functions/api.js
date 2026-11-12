@@ -13,13 +13,11 @@ const app = require('../../app');
 const serverlessHandler = serverless(app);
 
 exports.handler = async (event, context) => {
-    // Collega l'evento Lambda per consentire a @netlify/blobs di accedere allo store
-    if (event && event.blobs) {
-        try {
-            connectLambda(event);
-        } catch (e) {
-            console.warn('Avviso connectLambda:', e.message);
-        }
+    // Inizializza il contesto Lambda per Netlify Blobs
+    try {
+        connectLambda(event);
+    } catch (e) {
+        // Ignora se non in ambiente Netlify Lambda o mock
     }
 
     const response = await serverlessHandler(event, context);
