@@ -597,6 +597,47 @@ button:hover {
     border: 1px solid #d4c570;
 }
 
+.col-highlight-archivio {
+    background-color: #fff9e6 !important;
+    border-left: 2px solid #c8a444 !important;
+    border-right: 2px solid #c8a444 !important;
+}
+
+.col-archivio-th {
+    background-color: #f7eed2 !important;
+    color: #4a3407 !important;
+}
+
+.col-archivio-td {
+    background-color: #fffdf5;
+}
+
+.table-apply-btn {
+    background-color: #634d1b;
+    color: #ffffff;
+    border: none;
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    font-family: inherit;
+}
+
+.table-apply-btn:hover {
+    background-color: #42320f;
+    transform: translateY(-1px);
+}
+
+.table-apply-btn.highlight-btn {
+    background-color: #2e7d32;
+    font-weight: bold;
+}
+
+.table-apply-btn.highlight-btn:hover {
+    background-color: #1b5e20;
+}
+
 /* =========================================================
    PROCEDURA E STILE LOGIN (COERENTE CON IL SOFTWARE)
    ========================================================= */

@@ -177,10 +177,10 @@
             <button onclick="copiaBBCode()" style="margin-top: 10px;">📋 Copia Codice</button>
         </div>
 
-        <!-- SEZIONE SEPARATA: CALCOLO VALORE 1 PIETRA E 1 FERRO & STIPENDI MINIERE (1, 7, 15, 30 GIORNI) -->
+        <!-- SEZIONE SEPARATA: CALCOLO VALORE 1 PIETRA E 1 FERRO & STIPENDI MINIERE (1, ARCHIVIO, 7, 15, 30 GIORNI) -->
         <div id="sezione-opzione-pietra-ferro" class="mine-salaries-section" style="display: none; margin-top: 35px;">
             <div class="mine-salaries-header">
-                <h2>⚖️ Calcolo Valore 1 Pietra e 1 Ferro (1, 7, 15 e 30 Giorni)</h2>
+                <h2>⚖️ Calcolo Valore 1 Pietra e 1 Ferro (1 Giorno, Archivio Salvato, 7, 15 e 30 Giorni)</h2>
                 <div class="quick-salary-bar">
                     <label for="stipendioRapido">Stipendio rapido per tutte (ducati):</label>
                     <input type="number" id="stipendioRapido" step="0.01" placeholder="es. 20" style="width: 90px;">
@@ -188,7 +188,7 @@
                 </div>
             </div>
             <p class="section-hint">
-                Inserisci gli stipendi delle miniere: lo <strong>stipendio per singola ora</strong> è calcolato come <code>Stipendio / 20</code> e lo <strong>stipendio totale della miniera</strong> è calcolato in base all'<strong>affluenza</strong> recuperata dal resoconto inserito (previsto per <strong>1 giorno, 7 giorni, 15 giorni e 30 giorni</strong>).
+                Inserisci gli stipendi delle miniere: lo <strong>stipendio per singola ora</strong> è calcolato come <code>Stipendio / 20</code> e lo <strong>stipendio totale della miniera</strong> è calcolato in base all'<strong>affluenza</strong> recuperata dal resoconto inserito e dai <strong>giorni salvati in archivio</strong> (calcolabile per <strong>1 giorno, giorni salvati in archivio, 7 giorni, 15 giorni e 30 giorni</strong>).
             </p>
 
             <div class="table-responsive">
@@ -201,6 +201,7 @@
                             <th>Stipendio/ora (÷20)</th>
                             <th>Affluenza (ore)</th>
                             <th>Stipendio Tot. 1g</th>
+                            <th class="col-archivio-th">Stipendio Tot. Archivio</th>
                             <th>Stipendio Tot. 7g</th>
                             <th>Stipendio Tot. 15g</th>
                             <th>Stipendio Tot. 30g</th>
@@ -216,10 +217,16 @@
                     <label for="periodoCalcoloSelect"><strong>Dettaglio formula per:</strong></label>
                     <select id="periodoCalcoloSelect" onchange="aggiornaAnteprimaStipendi()">
                         <option value="1">1 Giorno</option>
+                        <option value="archivio">📂 Archivio (giorni salvati)</option>
                         <option value="7">7 Giorni</option>
                         <option value="15">15 Giorni</option>
                         <option value="30">30 Giorni</option>
                     </select>
+                    <span id="box-filtro-giorni-archivio" style="display: inline-flex; align-items: center; gap: 4px; margin-left: 8px;">
+                        <label for="numGiorniArchivioInput"><strong>Giorni da archivio:</strong></label>
+                        <input type="number" id="numGiorniArchivioInput" min="1" step="1" style="width: 52px; text-align: center; padding: 3px 5px; font-weight: bold;" onchange="onNumGiorniArchivioChange()" oninput="onNumGiorniArchivioChange()" title="Numero di giorni salvati da includere nel calcolo dell'archivio">
+                        <small id="max-giorni-archivio-label" style="color: #665; font-size: 12px;"></small>
+                    </span>
                     <label for="modalitaPeriodoSelect" style="margin-left: 10px;"><strong>Modalità calcolo periodi:</strong></label>
                     <select id="modalitaPeriodoSelect" onchange="aggiornaAnteprimaStipendi()">
                         <option value="misto">Archivio (con proiezione se &lt; N gg)</option>
@@ -227,7 +234,10 @@
                         <option value="proiezione">Proiezione dal Giorno Corrente (×1, ×7, ×15, ×30)</option>
                     </select>
                 </div>
-                <button type="button" onclick="mostraCalcoloPietraFerro()" style="padding: 8px 16px; font-size: 14px;">⚖️ Calcola 1 Pietra e 1 Ferro</button>
+                <div class="auto-apply-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" onclick="mostraCalcoloPietraFerro()" style="padding: 8px 16px; font-size: 14px;">⚖️ Calcola 1 Pietra e 1 Ferro</button>
+                    <button type="button" onclick="applicaValoriPietraFerroAlResoconto()" class="save-btn" style="padding: 8px 14px; font-size: 14px;" title="Applica i valori calcolati di 1 Pietra e 1 Ferro ai parametri del resoconto in alto">📥 Applica a Resoconto</button>
+                </div>
             </div>
 
             <div id="live-pietra-ferro-preview" class="live-calc-preview"></div>
