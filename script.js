@@ -74,6 +74,29 @@ function segnalaLogoutInattivita() {
     }
 }
 
+let intervalloSyncPeriodico = null;
+
+function avviaSincronizzazionePeriodica() {
+    if (intervalloSyncPeriodico) return;
+    window.addEventListener('focus', () => {
+        if (window.location.protocol.startsWith('http')) {
+            const app = document.getElementById('schermata-app');
+            if (app && !app.hidden) {
+                sincronizzaConCloud();
+            }
+        }
+    });
+
+    intervalloSyncPeriodico = setInterval(() => {
+        if (window.location.protocol.startsWith('http')) {
+            const app = document.getElementById('schermata-app');
+            if (app && !app.hidden) {
+                sincronizzaConCloud();
+            }
+        }
+    }, 20000);
+}
+
 function mostraApp(nomeUtente) {
     const loginSchermata = document.getElementById('schermata-login');
     const appSchermata = document.getElementById('schermata-app');
@@ -88,6 +111,7 @@ function mostraApp(nomeUtente) {
     }
     if (window.location.protocol.startsWith('http')) {
         sincronizzaConCloud();
+        avviaSincronizzazionePeriodica();
     }
 }
 
@@ -805,18 +829,42 @@ async function sincronizzaConCloud(opzioni = {}) {
         const localeArchivio = caricaArchivio();
         const localeStipendi = caricaStipendiMiniere();
 
-        const nCloud = Object.keys(cloudArchivio).length;
-        const nLocale = Object.keys(localeArchivio).length;
+        let deveInviareAlCloud = Boolean(opzioni.forzato);
+        const archivioFuso = {};
 
-        // Unione (merge) dei dati: il cloud prevale per consistenza, ma non cancelliamo dati locali nuovi
-        const archivioFuso = { ...cloudArchivio, ...localeArchivio };
-        const stipendiFusi = { ...cloudStipendi, ...localeStipendi };
+        // 1. Il Cloud è la fonte di verità condivisa per tutti gli utenti
+        for (const [data, datiCloud] of Object.entries(cloudArchivio)) {
+            archivioFuso[data] = datiCloud;
+        }
+
+        // 2. Unisce i dati locali solo se sono più recenti o mancano sul cloud (es. creati offline)
+        for (const [data, datiLocale] of Object.entries(localeArchivio)) {
+            if (!archivioFuso[data]) {
+                archivioFuso[data] = datiLocale;
+                deveInviareAlCloud = true;
+            } else {
+                const tCloud = new Date(archivioFuso[data].salvatoIl || 0).getTime();
+                const tLocale = new Date(datiLocale.salvatoIl || 0).getTime();
+                if (tLocale > tCloud) {
+                    archivioFuso[data] = datiLocale;
+                    deveInviareAlCloud = true;
+                }
+            }
+        }
+
+        // 3. Unione stipendi: il cloud ha la precedenza
+        const stipendiFusi = { ...localeStipendi, ...cloudStipendi };
+        for (const k of Object.keys(localeStipendi)) {
+            if (!(k in cloudStipendi)) {
+                deveInviareAlCloud = true;
+                break;
+            }
+        }
 
         salvaArchivio(archivioFuso, false);
         salvaStipendiMiniere(stipendiFusi, false);
 
-        // Se localmente c'erano più dati rispetto al cloud o sincronizzazione forzata dall'utente, riversa l'unione sul cloud
-        if (nLocale > nCloud || opzioni.forzato) {
+        if (deveInviareAlCloud) {
             await api('/api/archivio', {
                 method: 'POST',
                 corpo: {
@@ -899,7 +947,7 @@ function aggiornaListaGiorniSalvati(dataDaSelezionare = null) {
 }
 
 // 1. TASTINO SALVA GIORNO (con controllo sovrascrittura)
-function salvaGiorno() {
+async function salvaGiorno() {
     const d = elaboraDati();
     if (!d) {
         return alert("Inserisci prima il testo del resoconto giornaliero da salvare!");
@@ -926,11 +974,14 @@ function salvaGiorno() {
         salvatoIl: new Date().toISOString()
     };
 
-    salvaArchivio(archivio);
+    salvaArchivio(archivio, false);
     aggiornaListaGiorniSalvati(d.data);
     renderTabellaStipendiInput();
     if (typeof aggiornaStatisticheSeVisibili === 'function') {
         aggiornaStatisticheSeVisibili();
+    }
+    if (window.location.protocol.startsWith('http')) {
+        await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
     }
     alert(`Dati del giorno ${d.data} salvati correttamente in formato JSON!`);
 }
@@ -1149,7 +1200,7 @@ function generaBBCodeResocontoFinale() {
 }
 
 // -------------- FUNZIONI AUSILIARIE ARCHIVIO (ELIMINA / ESPORTA / IMPORTA FILE JSON) --------------
-function eliminaGiornoSalvato() {
+async function eliminaGiornoSalvato() {
     const select = document.getElementById('giornoSalvatoSelect');
     const dataScelta = select ? select.value : '';
     if (!dataScelta) {
@@ -1162,7 +1213,7 @@ function eliminaGiornoSalvato() {
 
     const archivio = caricaArchivio();
     delete archivio[dataScelta];
-    salvaArchivio(archivio);
+    salvaArchivio(archivio, false);
     aggiornaListaGiorniSalvati();
     renderTabellaStipendiInput();
     if (typeof aggiornaStatisticheSeVisibili === 'function') {
@@ -1170,6 +1221,9 @@ function eliminaGiornoSalvato() {
     }
     document.getElementById('output-section').style.display = 'none';
     document.getElementById('bbcode-section').style.display = 'none';
+    if (window.location.protocol.startsWith('http')) {
+        await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
+    }
 }
 
 function svuotaArchivio() {
@@ -1252,11 +1306,14 @@ function importaJSON(event) {
                 }
             });
 
-            salvaArchivio(archivio);
+            salvaArchivio(archivio, false);
             aggiornaListaGiorniSalvati();
             renderTabellaStipendiInput();
             if (typeof aggiornaStatisticheSeVisibili === 'function') {
                 aggiornaStatisticheSeVisibili();
+            }
+            if (window.location.protocol.startsWith('http')) {
+                inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
             }
             alert(`Importazione completata: ${importatiCount} giorni caricati in archivio.`);
         } catch (err) {

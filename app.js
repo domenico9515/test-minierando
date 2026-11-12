@@ -24,7 +24,16 @@ const SESSION_SECRET = config.sessionSecret;
 const DURATA_SESSIONE_MS = config.durataSessioneMs;
 const COOKIE_NAME = config.cookieName;
 
-const LOCAL_STORAGE_FILE = path.join(__dirname, 'config', 'archivio_cloud_fallback.json');
+function ottieniPercorsoFallback() {
+    if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        return path.join('/tmp', 'archivio_cloud_fallback.json');
+    }
+    const dir = path.join(__dirname, 'config');
+    if (!fs.existsSync(dir)) {
+        try { fs.mkdirSync(dir, { recursive: true }); } catch {}
+    }
+    return path.join(dir, 'archivio_cloud_fallback.json');
+}
 
 // Abilita CORS con credenziali per supportare chiamate sia locali che su Netlify
 app.use(cors({
@@ -38,9 +47,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Inizializzazione contesto Netlify Blobs per ogni richiesta serverless
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store');
-    if (req.apiGateway && req.apiGateway.event) {
+    const lambdaEvent = (req.apiGateway && req.apiGateway.event) || req.serverlessEvent;
+    if (lambdaEvent) {
         try {
-            connectLambda(req.apiGateway.event);
+            connectLambda(lambdaEvent);
         } catch {}
     }
     next();
@@ -50,13 +60,14 @@ app.use((req, res, next) => {
 // GESTIONE PERSISTENZA CLOUD (NETLIFY BLOBS + FALLBACK LOCALE)
 // ============================================================
 function ottieniStoreBlobs(req) {
-    if (req && req.apiGateway && req.apiGateway.event) {
+    const lambdaEvent = (req && req.apiGateway && req.apiGateway.event) || (req && req.serverlessEvent);
+    if (lambdaEvent) {
         try {
-            connectLambda(req.apiGateway.event);
+            connectLambda(lambdaEvent);
         } catch {}
     }
     try {
-        return getStore({ name: 'minierando_dati', consistency: 'strong' });
+        return getStore('minierando_dati');
     } catch {
         return null;
     }
@@ -87,9 +98,10 @@ async function leggiDatiStore(req) {
     }
 
     // Fallback locale su file JSON per ambienti locali o offline
-    if (fs.existsSync(LOCAL_STORAGE_FILE)) {
+    const fileFallback = ottieniPercorsoFallback();
+    if (fs.existsSync(fileFallback)) {
         try {
-            const raw = JSON.parse(fs.readFileSync(LOCAL_STORAGE_FILE, 'utf8'));
+            const raw = JSON.parse(fs.readFileSync(fileFallback, 'utf8'));
             return {
                 archivio: (raw.archivio && typeof raw.archivio === 'object') ? raw.archivio : {},
                 stipendi: (raw.stipendi && typeof raw.stipendi === 'object') ? raw.stipendi : {},
@@ -121,14 +133,19 @@ async function scriviDatiStore(req, payload) {
     }
 
     // Salva sempre anche su file locale per ridondanza/offline
+    let salvatoSuFile = false;
     try {
-        fs.writeFileSync(LOCAL_STORAGE_FILE, JSON.stringify(datiNormalizzati, null, 2), 'utf8');
-    } catch {}
+        const fileFallback = ottieniPercorsoFallback();
+        fs.writeFileSync(fileFallback, JSON.stringify(datiNormalizzati, null, 2), 'utf8');
+        salvatoSuFile = true;
+    } catch (e) {
+        console.warn('Avviso scrittura fallback locale:', e.message);
+    }
 
     return {
-        ok: true,
-        salvato: true,
-        provider: salvatoSuBlobs ? 'netlify_blobs' : 'local_file',
+        ok: salvatoSuBlobs || salvatoSuFile,
+        salvato: salvatoSuBlobs || salvatoSuFile,
+        provider: salvatoSuBlobs ? 'netlify_blobs' : (salvatoSuFile ? 'local_file' : 'nessuno'),
         aggiornatoIl: datiNormalizzati.aggiornatoIl
     };
 }

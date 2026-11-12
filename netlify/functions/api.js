@@ -10,7 +10,13 @@ const { connectLambda } = require('@netlify/blobs');
 const serverless = require('serverless-http');
 const app = require('../../app');
 
-const serverlessHandler = serverless(app);
+const serverlessHandler = serverless(app, {
+    request: (request, event, context) => {
+        request.serverlessEvent = event;
+        request.serverlessContext = context;
+        request.apiGateway = { event, context };
+    }
+});
 
 exports.handler = async (event, context) => {
     // Inizializza il contesto Lambda per Netlify Blobs
