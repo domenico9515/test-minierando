@@ -6,6 +6,7 @@ node_modules/
 
 # Configurazione locale e segreti
 config/.env
+config/archivio_cloud_fallback.json
 .env
 .env.local
 

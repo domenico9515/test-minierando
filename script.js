@@ -86,6 +86,9 @@ function mostraApp(nomeUtente) {
     if (typeof aggiornaStatisticheSeVisibili === 'function') {
         aggiornaStatisticheSeVisibili();
     }
+    if (window.location.protocol.startsWith('http')) {
+        sincronizzaConCloud();
+    }
 }
 
 function mostraLogin() {
@@ -221,8 +224,11 @@ function caricaStipendiMiniere() {
     }
 }
 
-function salvaStipendiMiniere(stipendiMap) {
+function salvaStipendiMiniere(stipendiMap, syncCloud = true) {
     localStorage.setItem(STIPENDI_STORAGE_KEY, JSON.stringify(stipendiMap));
+    if (syncCloud && window.location.protocol.startsWith('http')) {
+        pianificaSincronizzazioneCloud();
+    }
 }
 
 function parseReport(testo, dataScelta) {
@@ -639,6 +645,123 @@ function copiaBBCode() {
     alert("Codice BBCode copiato negli appunti!");
 }
 
+// ============================================================
+// PERSISTENZA E SINCRONIZZAZIONE CLOUD (NETLIFY BLOBS)
+// ============================================================
+let timerSyncCloud = null;
+let sincronizzazioneInCorso = false;
+
+function impostaStatoSync(stato, messaggioExtra = '') {
+    const el = document.getElementById('sync-status-msg');
+    const btn = document.getElementById('btnSyncCloud');
+    if (!el) return;
+
+    el.className = 'sync-status-indicator ' + stato;
+    if (stato === 'syncing') {
+        el.textContent = '☁️ Sincronizzazione con Netlify Cloud in corso...';
+        if (btn) btn.disabled = true;
+    } else if (stato === 'success') {
+        const ora = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        el.textContent = `☁️ Sincronizzato con Netlify Cloud (${ora})`;
+        if (btn) btn.disabled = false;
+    } else if (stato === 'pending') {
+        el.textContent = '☁️ Modifiche salvate in locale, sincronizzazione cloud a breve...';
+    } else if (stato === 'error') {
+        el.textContent = messaggioExtra || '⚠️ Sincronizzazione cloud non riuscita (dati protetti in locale)';
+        if (btn) btn.disabled = false;
+    } else {
+        el.textContent = '';
+        if (btn) btn.disabled = false;
+    }
+}
+
+function pianificaSincronizzazioneCloud() {
+    if (timerSyncCloud) clearTimeout(timerSyncCloud);
+    impostaStatoSync('pending');
+    timerSyncCloud = setTimeout(() => {
+        inviaDatiAlCloud();
+    }, 600);
+}
+
+async function inviaDatiAlCloud(datiPersonalizzati = null) {
+    if (!window.location.protocol.startsWith('http')) return;
+    impostaStatoSync('syncing');
+    try {
+        const payload = datiPersonalizzati || {
+            archivio: caricaArchivio(),
+            stipendi: caricaStipendiMiniere()
+        };
+        const res = await api('/api/archivio', {
+            method: 'POST',
+            corpo: payload
+        });
+        if (res && res.ok) {
+            impostaStatoSync('success');
+        } else {
+            impostaStatoSync('error');
+        }
+    } catch (e) {
+        console.warn('Avviso invio cloud:', e.message);
+        impostaStatoSync('error');
+    }
+}
+
+async function sincronizzaConCloud(opzioni = {}) {
+    if (sincronizzazioneInCorso) return;
+    if (!window.location.protocol.startsWith('http')) return;
+
+    sincronizzazioneInCorso = true;
+    impostaStatoSync('syncing');
+
+    try {
+        const res = await api('/api/archivio');
+        if (!res || !res.ok) {
+            impostaStatoSync('error');
+            return;
+        }
+
+        const cloudArchivio = (res.archivio && typeof res.archivio === 'object') ? res.archivio : {};
+        const cloudStipendi = (res.stipendi && typeof res.stipendi === 'object') ? res.stipendi : {};
+
+        const localeArchivio = caricaArchivio();
+        const localeStipendi = caricaStipendiMiniere();
+
+        const nCloud = Object.keys(cloudArchivio).length;
+        const nLocale = Object.keys(localeArchivio).length;
+
+        // Unione (merge) dei dati: il cloud prevale per consistenza, ma non cancelliamo dati locali nuovi
+        const archivioFuso = { ...cloudArchivio, ...localeArchivio };
+        const stipendiFusi = { ...cloudStipendi, ...localeStipendi };
+
+        salvaArchivio(archivioFuso, false);
+        salvaStipendiMiniere(stipendiFusi, false);
+
+        // Se localmente c'erano più dati rispetto al cloud o sincronizzazione forzata dall'utente, riversa l'unione sul cloud
+        if (nLocale > nCloud || opzioni.forzato) {
+            await api('/api/archivio', {
+                method: 'POST',
+                corpo: {
+                    archivio: archivioFuso,
+                    stipendi: stipendiFusi
+                }
+            });
+        }
+
+        aggiornaListaGiorniSalvati();
+        renderTabellaStipendiInput();
+        if (typeof aggiornaStatisticheSeVisibili === 'function') {
+            aggiornaStatisticheSeVisibili();
+        }
+
+        impostaStatoSync('success');
+    } catch (e) {
+        console.warn('Avviso sincronizzazione cloud:', e.message);
+        impostaStatoSync('error');
+    } finally {
+        sincronizzazioneInCorso = false;
+    }
+}
+
 // -------------- GESTIONE ARCHIVIO JSON (SALVATAGGIO, MOSTRA, RESOCONTO FINALE) --------------
 function caricaArchivio() {
     try {
@@ -652,8 +775,11 @@ function caricaArchivio() {
     }
 }
 
-function salvaArchivio(archivio) {
+function salvaArchivio(archivio, syncCloud = true) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(archivio, null, 2));
+    if (syncCloud && window.location.protocol.startsWith('http')) {
+        pianificaSincronizzazioneCloud();
+    }
 }
 
 function aggiornaListaGiorniSalvati(dataDaSelezionare = null) {
@@ -975,6 +1101,10 @@ function svuotaArchivio() {
     }
     document.getElementById('output-section').style.display = 'none';
     document.getElementById('bbcode-section').style.display = 'none';
+
+    if (window.location.protocol.startsWith('http')) {
+        inviaDatiAlCloud({ archivio: {}, stipendi: caricaStipendiMiniere() });
+    }
 }
 
 function esportaJSON() {

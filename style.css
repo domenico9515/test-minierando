@@ -221,6 +221,40 @@ button:hover {
     background-color: #f7dada;
 }
 
+.sync-btn {
+    color: #124e66;
+    border-color: #748cab;
+    background-color: #f0f4f8;
+    font-weight: bold;
+}
+
+.sync-btn:hover {
+    background-color: #d8e2dc;
+    color: #0d1b2a;
+}
+
+.sync-status-indicator {
+    font-size: 0.82rem;
+    color: #636b6f;
+    margin-top: 8px;
+    text-align: right;
+    font-style: italic;
+    min-height: 18px;
+    transition: color 0.3s ease;
+}
+
+.sync-status-indicator.success {
+    color: #2b7a4b;
+}
+
+.sync-status-indicator.syncing {
+    color: #124e66;
+}
+
+.sync-status-indicator.error {
+    color: #a83232;
+}
+
 /* Banner e Tabella Riepilogo Finale */
 .report-banner {
     background-color: #e6dbb8;

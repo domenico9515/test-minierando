@@ -4,11 +4,15 @@
  * Express App - Gestione Resoconto Miniere
  * Autenticazione e gestione sessione derivata dal modello superset (superset-db-sync)
  * Supporta sia il server Node.js locale (server.js) che Netlify Functions (serverless)
+ * con persistenza cloud ibrida tramite Netlify Blobs e fallback locale
  */
 
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const { getStore } = require('@netlify/blobs');
 const config = require('./config/env/all');
 
 const app = express();
@@ -20,20 +24,98 @@ const SESSION_SECRET = config.sessionSecret;
 const DURATA_SESSIONE_MS = config.durataSessioneMs;
 const COOKIE_NAME = config.cookieName;
 
+const LOCAL_STORAGE_FILE = path.join(__dirname, 'config', 'archivio_cloud_fallback.json');
+
 // Abilita CORS con credenziali per supportare chiamate sia locali che su Netlify
 app.use(cors({
     origin: true,
     credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cache-control no-store per tutte le API, identico a superset
 app.use((req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
 });
+
+// ============================================================
+// GESTIONE PERSISTENZA CLOUD (NETLIFY BLOBS + FALLBACK LOCALE)
+// ============================================================
+function ottieniStoreBlobs() {
+    try {
+        return getStore({ name: 'minierando_dati', consistency: 'strong' });
+    } catch {
+        return null;
+    }
+}
+
+async function leggiDatiStore() {
+    const store = ottieniStoreBlobs();
+    if (store) {
+        try {
+            const dati = await store.get('archivio_completo', { type: 'json' });
+            if (dati && typeof dati === 'object') {
+                return {
+                    archivio: (dati.archivio && typeof dati.archivio === 'object') ? dati.archivio : {},
+                    stipendi: (dati.stipendi && typeof dati.stipendi === 'object') ? dati.stipendi : {},
+                    aggiornatoIl: dati.aggiornatoIl || null,
+                    provider: 'netlify_blobs'
+                };
+            }
+        } catch (e) {
+            console.warn('Avviso lettura Netlify Blobs:', e.message);
+        }
+    }
+
+    // Fallback locale su file JSON per ambienti locali o offline
+    if (fs.existsSync(LOCAL_STORAGE_FILE)) {
+        try {
+            const raw = JSON.parse(fs.readFileSync(LOCAL_STORAGE_FILE, 'utf8'));
+            return {
+                archivio: (raw.archivio && typeof raw.archivio === 'object') ? raw.archivio : {},
+                stipendi: (raw.stipendi && typeof raw.stipendi === 'object') ? raw.stipendi : {},
+                aggiornatoIl: raw.aggiornatoIl || null,
+                provider: 'local_file'
+            };
+        } catch {}
+    }
+
+    return { archivio: {}, stipendi: {}, aggiornatoIl: null, provider: 'vuoto' };
+}
+
+async function scriviDatiStore(payload) {
+    const datiNormalizzati = {
+        archivio: (payload && typeof payload.archivio === 'object') ? payload.archivio : {},
+        stipendi: (payload && typeof payload.stipendi === 'object') ? payload.stipendi : {},
+        aggiornatoIl: new Date().toISOString()
+    };
+
+    let salvatoSuBlobs = false;
+    const store = ottieniStoreBlobs();
+    if (store) {
+        try {
+            await store.setJSON('archivio_completo', datiNormalizzati);
+            salvatoSuBlobs = true;
+        } catch (e) {
+            console.warn('Avviso scrittura Netlify Blobs:', e.message);
+        }
+    }
+
+    // Salva sempre anche su file locale per ridondanza/offline
+    try {
+        fs.writeFileSync(LOCAL_STORAGE_FILE, JSON.stringify(datiNormalizzati, null, 2), 'utf8');
+    } catch {}
+
+    return {
+        ok: true,
+        salvato: true,
+        provider: salvatoSuBlobs ? 'netlify_blobs' : 'local_file',
+        aggiornatoIl: datiNormalizzati.aggiornatoIl
+    };
+}
 
 // ============================================================
 // SESSIONE E LOGIN (MODELLO SUPERSET)
@@ -210,6 +292,25 @@ apiRouter.get('/auth/verify', richiediLogin, (req, res) => {
         valid: true,
         user: req.utente
     });
+});
+
+// Endpoint di persistenza archivio (Netlify Blobs)
+apiRouter.get('/archivio', richiediLogin, async (req, res) => {
+    try {
+        const dati = await leggiDatiStore();
+        res.json({ ok: true, ...dati });
+    } catch (e) {
+        res.status(500).json({ ok: false, errore: 'Impossibile leggere i dati: ' + e.message });
+    }
+});
+
+apiRouter.post('/archivio', richiediLogin, async (req, res) => {
+    try {
+        const esito = await scriviDatiStore(req.body);
+        res.json(esito);
+    } catch (e) {
+        res.status(500).json({ ok: false, errore: 'Impossibile salvare i dati: ' + e.message });
+    }
 });
 
 // Reindirizzamento vista statistiche

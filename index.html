@@ -142,10 +142,12 @@
                     </div>
                 </div>
                 <div class="archive-file-controls">
+                    <button type="button" onclick="sincronizzaConCloud({ forzato: true })" class="secondary-btn sync-btn" id="btnSyncCloud" title="Sincronizza l'archivio con Netlify Cloud">☁️ Sincronizza Cloud</button>
                     <button onclick="esportaJSON()" class="secondary-btn">📥 Esporta file JSON</button>
                     <button onclick="document.getElementById('importJsonInput').click()" class="secondary-btn">📤 Importa file JSON</button>
                     <button onclick="svuotaArchivio()" class="secondary-btn danger-outline-btn">🧹 Svuota Tutto</button>
                 </div>
+                <div id="sync-status-msg" class="sync-status-indicator"></div>
             </div>
         </div>
         <input type="file" id="importJsonInput" accept=".json" style="display: none;" onchange="importaJSON(event)">
