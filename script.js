@@ -1772,11 +1772,13 @@ function aggiornaControlliArchivioPietraFerro() {
         if (!optArchivio) {
             optArchivio = document.createElement('option');
             optArchivio.value = 'archivio';
-            if (pSelect.children.length > 1) {
-                pSelect.insertBefore(optArchivio, pSelect.children[1]);
+            if (pSelect.firstChild) {
+                pSelect.insertBefore(optArchivio, pSelect.firstChild);
             } else {
                 pSelect.appendChild(optArchivio);
             }
+        } else if (pSelect.firstChild && pSelect.firstChild !== optArchivio) {
+            pSelect.insertBefore(optArchivio, pSelect.firstChild);
         }
         const nUsati = inputNum ? (parseInt(inputNum.value) || numSalvati) : numSalvati;
         optArchivio.textContent = numSalvati > 0
@@ -1785,6 +1787,8 @@ function aggiornaControlliArchivioPietraFerro() {
         optArchivio.disabled = numSalvati === 0;
         if (valPrec) {
             pSelect.value = valPrec;
+        } else if (numSalvati > 0) {
+            pSelect.value = 'archivio';
         }
     }
 }
@@ -1802,7 +1806,7 @@ function renderTabellaStipendiInput() {
     const minere = ottieniMiniereCorrenti();
     const periodi = calcolaPeriodi1_7_15_30(minere);
 
-    const periodiChiavi = [1, 'archivio', 7, 15, 30];
+    const periodiChiavi = ['archivio', 1, 7, 15, 30];
     const datiPerMiniera = {};
     periodiChiavi.forEach(p => {
         datiPerMiniera[p] = {};
@@ -1826,8 +1830,8 @@ function renderTabellaStipendiInput() {
             <th>Stipendio inserito (ducati)</th>
             <th>Stipendio/ora (÷20)</th>
             <th>Affluenza (ore)</th>
-            <th>Stipendio Tot. 1g</th>
             <th class="col-archivio-th">Stipendio Tot. Archivio (${pArch.giorni}g)</th>
+            <th>Stipendio Tot. 1g</th>
             <th>Stipendio Tot. 7g</th>
             <th>Stipendio Tot. 15g</th>
             <th>Stipendio Tot. 30g</th>
@@ -1839,8 +1843,8 @@ function renderTabellaStipendiInput() {
         if (m.nome === 'Sconosciuta') return;
         const keyNodo = m.nodo || `id_${m.id}`;
         const closedBadge = m.chiusa ? ' <span class="closed-text">[CHIUSA]</span>' : '';
-        const d1 = datiPerMiniera[1][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
         const dArch = datiPerMiniera['archivio'][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
+        const d1 = datiPerMiniera[1][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
         const d7 = datiPerMiniera[7][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
         const d15 = datiPerMiniera[15][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
         const d30 = datiPerMiniera[30][keyNodo] || { stipendio_totale: 0, affluenza: 0 };
@@ -1859,8 +1863,8 @@ function renderTabellaStipendiInput() {
                 </td>
                 <td><strong>${formatNumPreciso(m.stipendio_orario, 2)}</strong> <small>ducati/h</small></td>
                 <td><strong>${formatNum(m.affluenza || 0)}</strong> <small>ore</small></td>
-                <td><strong>${formatNum(d1.stipendio_totale)}</strong> <small>ducati</small></td>
                 <td class="col-archivio-td"><strong>${formatNum(dArch.stipendio_totale)}</strong> <small>ducati</small><br><small>(${formatNum(dArch.affluenza)} ore)</small></td>
+                <td><strong>${formatNum(d1.stipendio_totale)}</strong> <small>ducati</small></td>
                 <td><strong>${formatNum(d7.stipendio_totale)}</strong> <small>ducati</small><br><small>(${formatNum(d7.affluenza)} ore)</small></td>
                 <td><strong>${formatNum(d15.stipendio_totale)}</strong> <small>ducati</small><br><small>(${formatNum(d15.affluenza)} ore)</small></td>
                 <td><strong>${formatNum(d30.stipendio_totale)}</strong> <small>ducati</small><br><small>(${formatNum(d30.affluenza)} ore)</small></td>
@@ -1928,13 +1932,13 @@ function aggiornaValoriTabellaStipendiInPlace() {
         if (cells.length >= 10) {
             cells[3].innerHTML = `<strong>${formatNumPreciso(m.stipendio_orario, 2)}</strong> <small>ducati/h</small>`;
             cells[4].innerHTML = `<strong>${formatNum(m.affluenza || 0)}</strong> <small>ore</small>`;
-            const m1 = periodi[1].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo);
             const mArch = periodi['archivio'] ? periodi['archivio'].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo) : null;
+            const m1 = periodi[1].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo);
             const m7 = periodi[7].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo);
             const m15 = periodi[15].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo);
             const m30 = periodi[30].minere.find(x => (x.nodo || `id_${x.id}`) === keyNodo);
-            cells[5].innerHTML = `<strong>${formatNum(m1 ? m1.stipendio_totale : 0)}</strong> <small>ducati</small>`;
-            cells[6].innerHTML = `<strong>${formatNum(mArch ? mArch.stipendio_totale : 0)}</strong> <small>ducati</small><br><small>(${formatNum(mArch ? mArch.affluenza : 0)} ore)</small>`;
+            cells[5].innerHTML = `<strong>${formatNum(mArch ? mArch.stipendio_totale : 0)}</strong> <small>ducati</small><br><small>(${formatNum(mArch ? mArch.affluenza : 0)} ore)</small>`;
+            cells[6].innerHTML = `<strong>${formatNum(m1 ? m1.stipendio_totale : 0)}</strong> <small>ducati</small>`;
             cells[7].innerHTML = `<strong>${formatNum(m7 ? m7.stipendio_totale : 0)}</strong> <small>ducati</small><br><small>(${formatNum(m7 ? m7.affluenza : 0)} ore)</small>`;
             cells[8].innerHTML = `<strong>${formatNum(m15 ? m15.stipendio_totale : 0)}</strong> <small>ducati</small><br><small>(${formatNum(m15 ? m15.affluenza : 0)} ore)</small>`;
             cells[9].innerHTML = `<strong>${formatNum(m30 ? m30.stipendio_totale : 0)}</strong> <small>ducati</small><br><small>(${formatNum(m30 ? m30.affluenza : 0)} ore)</small>`;
@@ -1999,8 +2003,8 @@ function mostraCalcoloPietraFerro(periodiPrecalcolati = null, minerePrecalcolate
     const pDettaglio = (pSelect && pSelect.value === 'archivio') ? 'archivio' : (pSelect ? (parseInt(pSelect.value) || 1) : 1);
     const datiDettaglio = periodi[pDettaglio] || periodi['archivio'] || periodi[1];
 
-    const p1 = periodi[1] || {};
     const pArch = periodi['archivio'] || { giorni: 0, descrizioneFonte: 'Nessun giorno salvato', stipendioTotPietra: 0, stipendioTotFerro: 0, stipendioTotTutte: 0, prodNettaMinierePietra: 0, prodLordaMinierePietra: 0, consumoPietraMinierePietra: 0, prodNettaMiniereFerro: 0, prodLordaMiniereFerro: 0, consumoFerroMiniereFerro: 0, consumoFerroMinierePietra: 0, consumoPietraMiniereFerro: 0, valore1Pietra: 0, valore1Ferro: 0 };
+    const p1 = periodi[1] || {};
     const p7 = periodi[7] || {};
     const p15 = periodi[15] || {};
     const p30 = periodi[30] || {};
@@ -2011,14 +2015,14 @@ function mostraCalcoloPietraFerro(periodiPrecalcolati = null, minerePrecalcolate
 
     sezionePF.innerHTML = `
         <div class="calc-pietra-ferro-container">
-            <h4>📊 Riepilogo Calcolo Valore di 1 Pietra e 1 Ferro (1 Giorno, Archivio Salvato, 7, 15 e 30 Giorni)</h4>
+            <h4>📊 Riepilogo Calcolo Valore di 1 Pietra e 1 Ferro (Archivio Salvato, 1 Giorno, 7, 15 e 30 Giorni)</h4>
             <div class="table-responsive">
                 <table class="days-table periods-comparison-table">
                     <thead>
                         <tr>
                             <th>Voce di Calcolo</th>
-                            <th>1 Giorno<br><small>${p1.descrizioneFonte || ''}</small></th>
                             <th class="col-highlight-archivio">📂 Archivio (${pArch.giorni} gg)<br><small>${pArch.descrizioneFonte || ''}</small></th>
+                            <th>1 Giorno<br><small>${p1.descrizioneFonte || ''}</small></th>
                             <th>7 Giorni<br><small>${p7.descrizioneFonte || ''}</small></th>
                             <th>15 Giorni<br><small>${p15.descrizioneFonte || ''}</small></th>
                             <th>30 Giorni<br><small>${p30.descrizioneFonte || ''}</small></th>
@@ -2027,80 +2031,80 @@ function mostraCalcoloPietraFerro(periodiPrecalcolati = null, minerePrecalcolate
                     <tbody>
                         <tr>
                             <td class="text-left">🪨 <strong>Stipendio Totale Miniere di Pietra</strong></td>
-                            <td><strong>${formatNum(p1.stipendioTotPietra)}</strong> ducati</td>
                             <td class="col-highlight-archivio"><strong>${formatNum(pArch.stipendioTotPietra)}</strong> ducati</td>
+                            <td><strong>${formatNum(p1.stipendioTotPietra)}</strong> ducati</td>
                             <td><strong>${formatNum(p7.stipendioTotPietra)}</strong> ducati</td>
                             <td><strong>${formatNum(p15.stipendioTotPietra)}</strong> ducati</td>
                             <td><strong>${formatNum(p30.stipendioTotPietra)}</strong> ducati</td>
                         </tr>
                         <tr>
                             <td class="text-left">⛏️ <strong>Stipendio Totale Miniere di Ferro</strong></td>
-                            <td><strong>${formatNum(p1.stipendioTotFerro)}</strong> ducati</td>
                             <td class="col-highlight-archivio"><strong>${formatNum(pArch.stipendioTotFerro)}</strong> ducati</td>
+                            <td><strong>${formatNum(p1.stipendioTotFerro)}</strong> ducati</td>
                             <td><strong>${formatNum(p7.stipendioTotFerro)}</strong> ducati</td>
                             <td><strong>${formatNum(p15.stipendioTotFerro)}</strong> ducati</td>
                             <td><strong>${formatNum(p30.stipendioTotFerro)}</strong> ducati</td>
                         </tr>
                         <tr>
                             <td class="text-left">💰 <strong>Stipendio Totale Tutte le Miniere</strong></td>
-                            <td>${formatNum(p1.stipendioTotTutte)} ducati</td>
                             <td class="col-highlight-archivio">${formatNum(pArch.stipendioTotTutte)} ducati</td>
+                            <td>${formatNum(p1.stipendioTotTutte)} ducati</td>
                             <td>${formatNum(p7.stipendioTotTutte)} ducati</td>
                             <td>${formatNum(p15.stipendioTotTutte)} ducati</td>
                             <td>${formatNum(p30.stipendioTotTutte)} ducati</td>
                         </tr>
                         <tr>
                             <td class="text-left">🪨 <strong>Produzione Netta Miniere di Pietra</strong><br><small>(Prod. Lorda Pietra - Consumo Pietra Miniere di Pietra)</small></td>
-                            <td>${formatNum(p1.prodNettaMinierePietra)} q.li <small>(${formatNum(p1.prodLordaMinierePietra)} - ${formatNum(p1.consumoPietraMinierePietra)})</small></td>
                             <td class="col-highlight-archivio">${formatNum(pArch.prodNettaMinierePietra)} q.li <small>(${formatNum(pArch.prodLordaMinierePietra)} - ${formatNum(pArch.consumoPietraMinierePietra)})</small></td>
+                            <td>${formatNum(p1.prodNettaMinierePietra)} q.li <small>(${formatNum(p1.prodLordaMinierePietra)} - ${formatNum(p1.consumoPietraMinierePietra)})</small></td>
                             <td>${formatNum(p7.prodNettaMinierePietra)} q.li <small>(${formatNum(p7.prodLordaMinierePietra)} - ${formatNum(p7.consumoPietraMinierePietra)})</small></td>
                             <td>${formatNum(p15.prodNettaMinierePietra)} q.li <small>(${formatNum(p15.prodLordaMinierePietra)} - ${formatNum(p15.consumoPietraMinierePietra)})</small></td>
                             <td>${formatNum(p30.prodNettaMinierePietra)} q.li <small>(${formatNum(p30.prodLordaMinierePietra)} - ${formatNum(p30.consumoPietraMinierePietra)})</small></td>
                         </tr>
                         <tr>
                             <td class="text-left">⛏️ <strong>Produzione Netta Miniere di Ferro</strong><br><small>(Prod. Lorda Ferro - Consumo Ferro Miniere di Ferro)</small></td>
-                            <td>${formatNum(p1.prodNettaMiniereFerro)} kg <small>(${formatNum(p1.prodLordaMiniereFerro)} - ${formatNum(p1.consumoFerroMiniereFerro)})</small></td>
                             <td class="col-highlight-archivio">${formatNum(pArch.prodNettaMiniereFerro)} kg <small>(${formatNum(pArch.prodLordaMiniereFerro)} - ${formatNum(pArch.consumoFerroMiniereFerro)})</small></td>
+                            <td>${formatNum(p1.prodNettaMiniereFerro)} kg <small>(${formatNum(p1.prodLordaMiniereFerro)} - ${formatNum(p1.consumoFerroMiniereFerro)})</small></td>
                             <td>${formatNum(p7.prodNettaMiniereFerro)} kg <small>(${formatNum(p7.prodLordaMiniereFerro)} - ${formatNum(p7.consumoFerroMiniereFerro)})</small></td>
                             <td>${formatNum(p15.prodNettaMiniereFerro)} kg <small>(${formatNum(p15.prodLordaMiniereFerro)} - ${formatNum(p15.consumoFerroMiniereFerro)})</small></td>
                             <td>${formatNum(p30.prodNettaMiniereFerro)} kg <small>(${formatNum(p30.prodLordaMiniereFerro)} - ${formatNum(p30.consumoFerroMiniereFerro)})</small></td>
                         </tr>
                         <tr>
                             <td class="text-left">🔩 <strong>Consumo Ferro delle Miniere di Pietra</strong></td>
-                            <td>${formatNum(p1.consumoFerroMinierePietra)} kg</td>
                             <td class="col-highlight-archivio">${formatNum(pArch.consumoFerroMinierePietra)} kg</td>
+                            <td>${formatNum(p1.consumoFerroMinierePietra)} kg</td>
                             <td>${formatNum(p7.consumoFerroMinierePietra)} kg</td>
                             <td>${formatNum(p15.consumoFerroMinierePietra)} kg</td>
                             <td>${formatNum(p30.consumoFerroMinierePietra)} kg</td>
                         </tr>
                         <tr>
                             <td class="text-left">🧱 <strong>Consumo Pietra delle Miniere di Ferro</strong></td>
-                            <td>${formatNum(p1.consumoPietraMiniereFerro)} q.li</td>
                             <td class="col-highlight-archivio">${formatNum(pArch.consumoPietraMiniereFerro)} q.li</td>
+                            <td>${formatNum(p1.consumoPietraMiniereFerro)} q.li</td>
                             <td>${formatNum(p7.consumoPietraMiniereFerro)} q.li</td>
                             <td>${formatNum(p15.consumoPietraMiniereFerro)} q.li</td>
                             <td>${formatNum(p30.consumoPietraMiniereFerro)} q.li</td>
                         </tr>
                         <tr class="result-row-pietra">
                             <td class="text-left">🪨 <strong>VALORE 1 PIETRA (ducati/quintale)</strong></td>
-                            <td><strong class="result-price">${formatNumPreciso(p1.valore1Pietra, 2)}</strong> ducati</td>
                             <td class="col-highlight-archivio"><strong class="result-price">${formatNumPreciso(pArch.valore1Pietra, 2)}</strong> ducati</td>
+                            <td><strong class="result-price">${formatNumPreciso(p1.valore1Pietra, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p7.valore1Pietra, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p15.valore1Pietra, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p30.valore1Pietra, 2)}</strong> ducati</td>
                         </tr>
                         <tr class="result-row-ferro">
                             <td class="text-left">⛏️ <strong>VALORE 1 FERRO (ducati/chilo)</strong></td>
-                            <td><strong class="result-price">${formatNumPreciso(p1.valore1Ferro, 2)}</strong> ducati</td>
                             <td class="col-highlight-archivio"><strong class="result-price">${formatNumPreciso(pArch.valore1Ferro, 2)}</strong> ducati</td>
+                            <td><strong class="result-price">${formatNumPreciso(p1.valore1Ferro, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p7.valore1Ferro, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p15.valore1Ferro, 2)}</strong> ducati</td>
                             <td><strong class="result-price">${formatNumPreciso(p30.valore1Ferro, 2)}</strong> ducati</td>
                         </tr>
                         <tr>
                             <td class="text-left">📥 <strong>Applica al resoconto</strong></td>
-                            <td><button type="button" class="table-apply-btn" onclick="applicaValoriPietraFerroAlResoconto(1)">Applica 1g</button></td>
                             <td class="col-highlight-archivio"><button type="button" class="table-apply-btn highlight-btn" onclick="applicaValoriPietraFerroAlResoconto('archivio')">Applica Archivio (${pArch.giorni}g)</button></td>
+                            <td><button type="button" class="table-apply-btn" onclick="applicaValoriPietraFerroAlResoconto(1)">Applica 1g</button></td>
                             <td><button type="button" class="table-apply-btn" onclick="applicaValoriPietraFerroAlResoconto(7)">Applica 7g</button></td>
                             <td><button type="button" class="table-apply-btn" onclick="applicaValoriPietraFerroAlResoconto(15)">Applica 15g</button></td>
                             <td><button type="button" class="table-apply-btn" onclick="applicaValoriPietraFerroAlResoconto(30)">Applica 30g</button></td>
