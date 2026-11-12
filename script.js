@@ -177,7 +177,8 @@ async function initAuth() {
                 } else {
                     // Modalità standalone file:// (offline)
                     if ((utente.toLowerCase() === 'admin' && password === 'admin') ||
-                        (utente.toLowerCase() === 'sindaco' && password === 'password123')) {
+                        (utente.toLowerCase() === 'sindaco' && password === 'password123') ||
+                        (utente.toLowerCase() === 'mrf' && password === 'mrf')) {
                         mostraApp(utente);
                     } else {
                         throw new Error('Utente o password non corretti.');

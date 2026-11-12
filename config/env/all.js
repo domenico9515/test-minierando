@@ -47,6 +47,12 @@ module.exports = {
             // Hash scrypt per 'password123'
             hash: 'scrypt:79d701f5f0c6eb3dabaa9236c9359e3f:3181d2cf479aca30a420af94e68d59055d56cb9094fb8f711511b26fa7f075f2bafcc5de996352aa273528b5b07b11e67947815805635716daaa683402497ed7',
             ruolo: 'responsabile'
+        },
+        {
+            utente: 'mrf',
+            // Hash scrypt per 'mrf'
+            hash: 'scrypt:da3c5136975fc3d0aa1d86b5f6ee2f2f:af3c0789808244a5ca8add3267e749179f21107814201e2a39d738b36007bbb7b3c61141a4362ceb9eed3d95c7be8d9d687417b4a572e1e109a0442c41c89351',
+            ruolo: 'operatore'
         }
     ]
 };

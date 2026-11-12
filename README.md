@@ -43,6 +43,7 @@ Applicazione web per l'elaborazione, l'archiviazione e la formattazione dei reso
 4. Effettua l'accesso con le credenziali predefinite:
    - Utente: **`admin`** | Password: **`admin`**
    - Utente ausiliario: **`sindaco`** | Password: **`password123`**
+   - Utente operatore: **`mrf`** | Password: **`mrf`**
 
 ### Generazione di nuovi Hash Password (Stile Superset)
 Per cambiare password o aggiungere un nuovo hash in `config/.env`:
