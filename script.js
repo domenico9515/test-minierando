@@ -79,16 +79,18 @@ let intervalloSyncPeriodico = null;
 function avviaSincronizzazionePeriodica() {
     if (intervalloSyncPeriodico) return;
     window.addEventListener('focus', () => {
-        if (window.location.protocol.startsWith('http')) {
+        if (window.location.protocol.startsWith('http') && !sincronizzazioneInCorso) {
             const app = document.getElementById('schermata-app');
             if (app && !app.hidden) {
-                sincronizzaConCloud();
+                setTimeout(() => {
+                    if (!sincronizzazioneInCorso) sincronizzaConCloud();
+                }, 300);
             }
         }
     });
 
     intervalloSyncPeriodico = setInterval(() => {
-        if (window.location.protocol.startsWith('http')) {
+        if (window.location.protocol.startsWith('http') && !sincronizzazioneInCorso) {
             const app = document.getElementById('schermata-app');
             if (app && !app.hidden) {
                 sincronizzaConCloud();
@@ -829,36 +831,25 @@ async function sincronizzaConCloud(opzioni = {}) {
         const localeArchivio = caricaArchivio();
         const localeStipendi = caricaStipendiMiniere();
 
+        let archivioFuso;
+        let stipendiFusi;
         let deveInviareAlCloud = Boolean(opzioni.forzato);
-        const archivioFuso = {};
 
-        // 1. Il Cloud è la fonte di verità condivisa per tutti gli utenti
-        for (const [data, datiCloud] of Object.entries(cloudArchivio)) {
-            archivioFuso[data] = datiCloud;
-        }
+        // Se il server ha già un archivio inizializzato (anche vuoto dopo svuota/elimina), il cloud è la fonte di verità
+        const serverInizializzato = (res.aggiornatoIl !== null && res.aggiornatoIl !== undefined) || Object.keys(cloudArchivio).length > 0;
 
-        // 2. Unisce i dati locali solo se sono più recenti o mancano sul cloud (es. creati offline)
-        for (const [data, datiLocale] of Object.entries(localeArchivio)) {
-            if (!archivioFuso[data]) {
-                archivioFuso[data] = datiLocale;
-                deveInviareAlCloud = true;
-            } else {
-                const tCloud = new Date(archivioFuso[data].salvatoIl || 0).getTime();
-                const tLocale = new Date(datiLocale.salvatoIl || 0).getTime();
-                if (tLocale > tCloud) {
-                    archivioFuso[data] = datiLocale;
-                    deveInviareAlCloud = true;
-                }
-            }
-        }
-
-        // 3. Unione stipendi: il cloud ha la precedenza
-        const stipendiFusi = { ...localeStipendi, ...cloudStipendi };
-        for (const k of Object.keys(localeStipendi)) {
-            if (!(k in cloudStipendi)) {
-                deveInviareAlCloud = true;
-                break;
-            }
+        if (serverInizializzato && !opzioni.forzato) {
+            // Il Cloud fa fede: se un giorno è stato cancellato sul cloud, rimane cancellato
+            archivioFuso = cloudArchivio;
+            stipendiFusi = cloudStipendi;
+        } else if (Object.keys(localeArchivio).length > 0) {
+            // Primo bootstrap in assoluto da locale verso un cloud mai usato o sync forzato
+            archivioFuso = { ...cloudArchivio, ...localeArchivio };
+            stipendiFusi = { ...cloudStipendi, ...localeStipendi };
+            deveInviareAlCloud = true;
+        } else {
+            archivioFuso = cloudArchivio;
+            stipendiFusi = cloudStipendi;
         }
 
         salvaArchivio(archivioFuso, false);
@@ -969,21 +960,26 @@ async function salvaGiorno() {
         }
     }
 
-    archivio[d.data] = {
-        ...d,
-        salvatoIl: new Date().toISOString()
-    };
+    sincronizzazioneInCorso = true;
+    try {
+        archivio[d.data] = {
+            ...d,
+            salvatoIl: new Date().toISOString()
+        };
 
-    salvaArchivio(archivio, false);
-    aggiornaListaGiorniSalvati(d.data);
-    renderTabellaStipendiInput();
-    if (typeof aggiornaStatisticheSeVisibili === 'function') {
-        aggiornaStatisticheSeVisibili();
+        salvaArchivio(archivio, false);
+        aggiornaListaGiorniSalvati(d.data);
+        renderTabellaStipendiInput();
+        if (typeof aggiornaStatisticheSeVisibili === 'function') {
+            aggiornaStatisticheSeVisibili();
+        }
+        if (window.location.protocol.startsWith('http')) {
+            await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
+        }
+        alert(`Dati del giorno ${d.data} salvati correttamente in formato JSON!`);
+    } finally {
+        sincronizzazioneInCorso = false;
     }
-    if (window.location.protocol.startsWith('http')) {
-        await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
-    }
-    alert(`Dati del giorno ${d.data} salvati correttamente in formato JSON!`);
 }
 
 // 2. TASTINO MOSTRA GIORNO SALVATO
@@ -1211,22 +1207,27 @@ async function eliminaGiornoSalvato() {
         return;
     }
 
-    const archivio = caricaArchivio();
-    delete archivio[dataScelta];
-    salvaArchivio(archivio, false);
-    aggiornaListaGiorniSalvati();
-    renderTabellaStipendiInput();
-    if (typeof aggiornaStatisticheSeVisibili === 'function') {
-        aggiornaStatisticheSeVisibili();
-    }
-    document.getElementById('output-section').style.display = 'none';
-    document.getElementById('bbcode-section').style.display = 'none';
-    if (window.location.protocol.startsWith('http')) {
-        await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
+    sincronizzazioneInCorso = true;
+    try {
+        const archivio = caricaArchivio();
+        delete archivio[dataScelta];
+        salvaArchivio(archivio, false);
+        aggiornaListaGiorniSalvati();
+        renderTabellaStipendiInput();
+        if (typeof aggiornaStatisticheSeVisibili === 'function') {
+            aggiornaStatisticheSeVisibili();
+        }
+        document.getElementById('output-section').style.display = 'none';
+        document.getElementById('bbcode-section').style.display = 'none';
+        if (window.location.protocol.startsWith('http')) {
+            await inviaDatiAlCloud({ archivio, stipendi: caricaStipendiMiniere() });
+        }
+    } finally {
+        sincronizzazioneInCorso = false;
     }
 }
 
-function svuotaArchivio() {
+async function svuotaArchivio() {
     const archivio = caricaArchivio();
     if (Object.keys(archivio).length === 0) {
         return alert("L'archivio è già vuoto.");
@@ -1234,17 +1235,23 @@ function svuotaArchivio() {
     if (!confirm("Attenzione: vuoi davvero cancellare TUTTI i giorni salvati nell'archivio?")) {
         return;
     }
-    localStorage.removeItem(STORAGE_KEY);
-    aggiornaListaGiorniSalvati();
-    renderTabellaStipendiInput();
-    if (typeof aggiornaStatisticheSeVisibili === 'function') {
-        aggiornaStatisticheSeVisibili();
-    }
-    document.getElementById('output-section').style.display = 'none';
-    document.getElementById('bbcode-section').style.display = 'none';
+    sincronizzazioneInCorso = true;
+    try {
+        salvaArchivio({}, false);
+        localStorage.removeItem(STORAGE_KEY);
+        aggiornaListaGiorniSalvati();
+        renderTabellaStipendiInput();
+        if (typeof aggiornaStatisticheSeVisibili === 'function') {
+            aggiornaStatisticheSeVisibili();
+        }
+        document.getElementById('output-section').style.display = 'none';
+        document.getElementById('bbcode-section').style.display = 'none';
 
-    if (window.location.protocol.startsWith('http')) {
-        inviaDatiAlCloud({ archivio: {}, stipendi: caricaStipendiMiniere() });
+        if (window.location.protocol.startsWith('http')) {
+            await inviaDatiAlCloud({ archivio: {}, stipendi: caricaStipendiMiniere() });
+        }
+    } finally {
+        sincronizzazioneInCorso = false;
     }
 }
 
